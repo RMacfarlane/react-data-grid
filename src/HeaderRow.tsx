@@ -6,7 +6,6 @@ import HeaderCell from './HeaderCell';
 import type { CalculatedColumn } from './types';
 import { getColSpan } from './utils';
 import type { DataGridProps } from './DataGrid';
-import { useRovingRowRef } from './hooks';
 
 type SharedDataGridProps<R, SR, K extends React.Key> = Pick<
   DataGridProps<R, SR, K>,
@@ -59,8 +58,6 @@ function HeaderRow<R, SR, K extends React.Key>({
   selectCell,
   shouldFocusGrid
 }: HeaderRowProps<R, SR, K>) {
-  const { ref, tabIndex, className } = useRovingRowRef(selectedCellIdx);
-
   const cells = [];
   for (let index = 0; index < columns.length; index++) {
     const column = columns[index];
@@ -90,9 +87,7 @@ function HeaderRow<R, SR, K extends React.Key>({
     <div
       role="row"
       aria-rowindex={1} // aria-rowindex is 1 based
-      ref={ref}
-      tabIndex={tabIndex}
-      className={clsx(headerRowClassname, className)}
+      className={clsx(headerRowClassname)}
     >
       {cells}
     </div>
