@@ -51,7 +51,6 @@ export default function HeaderCell<R, SR>({
   selectCell,
   shouldFocusGrid
 }: HeaderCellProps<R, SR>) {
-  const { ref, tabIndex, onFocus } = useRovingCellRef(isCellSelected);
   const sortIndex = sortColumns?.findIndex((sort) => sort.columnKey === column.key);
   const sortColumn =
     sortIndex !== undefined && sortIndex > -1 ? sortColumns![sortIndex] : undefined;
@@ -136,14 +135,6 @@ export default function HeaderCell<R, SR>({
     selectCell(column.idx);
   }
 
-  function handleFocus(event: React.FocusEvent<HTMLDivElement>) {
-    onFocus(event);
-    if (shouldFocusGrid) {
-      // Select the first header cell if there is no selected cell
-      selectCell(0);
-    }
-  }
-
   function getCell() {
     if (column.headerRenderer) {
       return (
@@ -179,15 +170,10 @@ export default function HeaderCell<R, SR>({
     <div
       role="columnheader"
       aria-colindex={column.idx + 1}
-      aria-selected={isCellSelected}
       aria-sort={ariaSort}
       aria-colspan={colSpan}
-      ref={ref}
-      // set the tabIndex to 0 when there is no selected cell so grid can receive focus
-      tabIndex={shouldFocusGrid ? 0 : tabIndex}
       className={className}
       style={getCellStyle(column, colSpan)}
-      onFocus={handleFocus}
       onClick={onClick}
       onPointerDown={column.resizable ? onPointerDown : undefined}
     >
