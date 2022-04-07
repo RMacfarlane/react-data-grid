@@ -21,11 +21,7 @@ import EditCell from './EditCell';
 import DragHandle from './DragHandle';
 import {
   assertIsValidKeyGetter,
-  getNextSelectedCellPosition,
   isSelectedCellEditable,
-  canExitGrid,
-  isCtrlKeyHeldDown,
-  isDefaultCellInput,
   getColSpan,
   max,
   sign,
@@ -200,7 +196,6 @@ function DataGrid<R, SR, K extends Key>(
     onFill,
     onPaste,
     // Toggles and modes
-    cellNavigationMode: rawCellNavigationMode,
     enableVirtualization,
     // Miscellaneous
     rowRenderer,
@@ -223,7 +218,6 @@ function DataGrid<R, SR, K extends Key>(
   const headerRowHeight = rawHeaderRowHeight ?? (typeof rowHeight === 'number' ? rowHeight : 35);
   const summaryRowHeight = rawSummaryRowHeight ?? (typeof rowHeight === 'number' ? rowHeight : 35);
   const RowRenderer = rowRenderer ?? Row;
-  const cellNavigationMode = rawCellNavigationMode ?? 'NONE';
   enableVirtualization ??= true;
 
   /**
@@ -299,8 +293,7 @@ function DataGrid<R, SR, K extends Key>(
     totalRowHeight,
     isGroupRow,
     getRowTop,
-    getRowHeight,
-    findRowIdx
+    getRowHeight
   } = useViewportRows({
     rawRows,
     groupBy,
@@ -484,74 +477,6 @@ function DataGrid<R, SR, K extends Key>(
     onExpandedGroupIdsChange(newExpandedGroupIds);
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (!(event.target instanceof Element)) return;
-    const isCellEvent = event.target.closest('.rdg-cell') !== null;
-    const isRowEvent = hasGroups && event.target.matches('.rdg-row, .rdg-header-row');
-    if (!isCellEvent && !isRowEvent) return;
-
-    const { key, keyCode } = event;
-    const { rowIdx } = selectedPosition;
-
-    if (
-      selectedCellIsWithinViewportBounds &&
-      onPaste != null &&
-      isCtrlKeyHeldDown(event) &&
-      !isGroupRow(rows[rowIdx]) &&
-      selectedPosition.mode === 'SELECT'
-    ) {
-      // event.key may differ by keyboard input language, so we use event.keyCode instead
-      // event.nativeEvent.code cannot be used either as it would break copy/paste for the DVORAK layout
-      const cKey = 67;
-      const vKey = 86;
-      if (keyCode === cKey) {
-        handleCopy();
-        return;
-      }
-      if (keyCode === vKey) {
-        handlePaste();
-        return;
-      }
-    }
-
-    if (isRowIdxWithinViewportBounds(rowIdx)) {
-      const row = rows[rowIdx];
-
-      if (
-        isGroupRow(row) &&
-        selectedPosition.idx === -1 &&
-        // Collapse the current group row if it is focused and is in expanded state
-        ((key === 'ArrowLeft' && row.isExpanded) ||
-          // Expand the current group row if it is focused and is in collapsed state
-          (key === 'ArrowRight' && !row.isExpanded))
-      ) {
-        event.preventDefault(); // Prevents scrolling
-        toggleGroup(row.id);
-        return;
-      }
-    }
-
-    switch (event.key) {
-      case 'Escape':
-        setCopiedCell(null);
-        return;
-      case 'ArrowUp':
-      case 'ArrowDown':
-      case 'ArrowLeft':
-      case 'ArrowRight':
-      case 'Tab':
-      case 'Home':
-      case 'End':
-      case 'PageUp':
-      case 'PageDown':
-        navigate(event);
-        break;
-      default:
-        handleCellInput(event);
-        break;
-    }
-  }
-
   function handleScroll(event: React.UIEvent<HTMLDivElement>) {
     const { scrollTop, scrollLeft } = event.currentTarget;
     setScrollTop(scrollTop);
@@ -578,60 +503,6 @@ function DataGrid<R, SR, K extends Key>(
   function commitEditorChanges() {
     if (selectedPosition.mode !== 'EDIT') return;
     updateRow(selectedPosition.rowIdx, selectedPosition.row);
-  }
-
-  function handleCopy() {
-    const { idx, rowIdx } = selectedPosition;
-    setCopiedCell({ row: rawRows[getRawRowIdx(rowIdx)], columnKey: columns[idx].key });
-  }
-
-  function handlePaste() {
-    if (!onPaste || !onRowsChange || copiedCell === null || !isCellEditable(selectedPosition)) {
-      return;
-    }
-
-    const { idx, rowIdx } = selectedPosition;
-    const targetRow = rawRows[getRawRowIdx(rowIdx)];
-
-    const updatedTargetRow = onPaste({
-      sourceRow: copiedCell.row,
-      sourceColumnKey: copiedCell.columnKey,
-      targetRow,
-      targetColumnKey: columns[idx].key
-    });
-
-    updateRow(rowIdx, updatedTargetRow);
-  }
-
-  function handleCellInput(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (!selectedCellIsWithinViewportBounds) return;
-    const row = rows[selectedPosition.rowIdx];
-    if (isGroupRow(row)) return;
-    const { key, shiftKey } = event;
-
-    // Select the row on Shift + Space
-    if (isSelectable && shiftKey && key === ' ') {
-      assertIsValidKeyGetter<R, K>(rowKeyGetter);
-      const rowKey = rowKeyGetter(row);
-      selectRow({ row, checked: !selectedRows.has(rowKey), isShiftClick: false });
-      // do not scroll
-      event.preventDefault();
-      return;
-    }
-
-    const column = columns[selectedPosition.idx];
-    column.editorOptions?.onCellKeyDown?.(event);
-    if (event.isDefaultPrevented()) return;
-
-    if (isCellEditable(selectedPosition) && isDefaultCellInput(event)) {
-      setSelectedPosition(({ idx, rowIdx }) => ({
-        idx,
-        rowIdx,
-        mode: 'EDIT',
-        row,
-        originalRow: row
-      }));
-    }
   }
 
   /**
@@ -722,113 +593,6 @@ function DataGrid<R, SR, K extends Key>(
         current.scrollTop = rowTop + rowHeight - clientHeight;
       }
     }
-  }
-
-  function getNextPosition(key: string, ctrlKey: boolean, shiftKey: boolean): Position {
-    const { idx, rowIdx } = selectedPosition;
-    const row = rows[rowIdx];
-    const isRowSelected = selectedCellIsWithinSelectionBounds && idx === -1;
-
-    // If a group row is focused, and it is collapsed, move to the parent group row (if there is one).
-    if (
-      key === 'ArrowLeft' &&
-      isRowSelected &&
-      isGroupRow(row) &&
-      !row.isExpanded &&
-      row.level !== 0
-    ) {
-      let parentRowIdx = -1;
-      for (let i = selectedPosition.rowIdx - 1; i >= 0; i--) {
-        const parentRow = rows[i];
-        if (isGroupRow(parentRow) && parentRow.id === row.parentId) {
-          parentRowIdx = i;
-          break;
-        }
-      }
-      if (parentRowIdx !== -1) {
-        return { idx, rowIdx: parentRowIdx };
-      }
-    }
-
-    switch (key) {
-      case 'ArrowUp':
-        return { idx, rowIdx: rowIdx - 1 };
-      case 'ArrowDown':
-        return { idx, rowIdx: rowIdx + 1 };
-      case 'ArrowLeft':
-        return { idx: idx - 1, rowIdx };
-      case 'ArrowRight':
-        return { idx: idx + 1, rowIdx };
-      case 'Tab':
-        return { idx: idx + (shiftKey ? -1 : 1), rowIdx };
-      case 'Home':
-        // If row is selected then move focus to the first row
-        if (isRowSelected) return { idx, rowIdx: 0 };
-        return { idx: 0, rowIdx: ctrlKey ? minRowIdx : rowIdx };
-      case 'End':
-        // If row is selected then move focus to the last row.
-        if (isRowSelected) return { idx, rowIdx: rows.length - 1 };
-        return { idx: maxColIdx, rowIdx: ctrlKey ? maxRowIdx : rowIdx };
-      case 'PageUp': {
-        if (selectedPosition.rowIdx === minRowIdx) return selectedPosition;
-        const nextRowY = getRowTop(rowIdx) + getRowHeight(rowIdx) - clientHeight;
-        return { idx, rowIdx: nextRowY > 0 ? findRowIdx(nextRowY) : 0 };
-      }
-      case 'PageDown': {
-        if (selectedPosition.rowIdx >= rows.length) return selectedPosition;
-        const nextRowY = getRowTop(rowIdx) + clientHeight;
-        return { idx, rowIdx: nextRowY < totalRowHeight ? findRowIdx(nextRowY) : rows.length - 1 };
-      }
-      default:
-        return selectedPosition;
-    }
-  }
-
-  function navigate(event: React.KeyboardEvent<HTMLDivElement>) {
-    const { key, shiftKey } = event;
-    let mode = cellNavigationMode;
-    if (key === 'Tab') {
-      if (
-        canExitGrid({
-          shiftKey,
-          cellNavigationMode,
-          maxColIdx,
-          minRowIdx,
-          maxRowIdx,
-          selectedPosition
-        })
-      ) {
-        commitEditorChanges();
-        // Allow focus to leave the grid so the next control in the tab order can be focused
-        return;
-      }
-
-      mode = cellNavigationMode === 'NONE' ? 'CHANGE_ROW' : cellNavigationMode;
-    }
-
-    // Do not allow focus to leave
-    event.preventDefault();
-
-    const ctrlKey = isCtrlKeyHeldDown(event);
-    const nextPosition = getNextPosition(key, ctrlKey, shiftKey);
-    if (isSamePosition(selectedPosition, nextPosition)) return;
-
-    const nextSelectedCellPosition = getNextSelectedCellPosition({
-      columns,
-      colSpanColumns,
-      rows,
-      summaryRows,
-      minRowIdx,
-      maxRowIdx,
-      lastFrozenColumnIndex,
-      cellNavigationMode: mode,
-      currentPosition: selectedPosition,
-      nextPosition,
-      isCellWithinBounds: isCellWithinSelectionBounds,
-      isGroupRow
-    });
-
-    selectCell(nextSelectedCellPosition);
   }
 
   function getDraggedOverCellIdx(currentRowIdx: number): number | undefined {
@@ -949,7 +713,7 @@ function DataGrid<R, SR, K extends Key>(
       }
 
       if (stickyRowIndex !== undefined && stickyRowIndexes[stickyRowIndex] === rowIdx) {
-        continue
+        continue;
       }
 
       const row = rows[rowIdx];
@@ -997,14 +761,16 @@ function DataGrid<R, SR, K extends Key>(
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (typeof row === 'object' && (row as any).isStickyRow) {
-        rowElements.push(<StickyRow 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          content={(row as any).content}
-          key={key}
-          isStuck={false}
-          top={top}
-        />)
-        continue
+        rowElements.push(
+          <StickyRow
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            content={(row as any).content}
+            key={key}
+            isStuck={false}
+            top={top}
+          />
+        );
+        continue;
       }
 
       rowElements.push(
@@ -1068,7 +834,6 @@ function DataGrid<R, SR, K extends Key>(
       }
       ref={gridRef}
       onScroll={handleScroll}
-      onKeyDown={handleKeyDown}
       data-testid={testId}
     >
       <HeaderRow
@@ -1083,13 +848,14 @@ function DataGrid<R, SR, K extends Key>(
         selectCell={selectHeaderCellLatest}
         shouldFocusGrid={!selectedCellIsWithinSelectionBounds}
       />
-      { stickyRowIndex !== undefined && stickyRowIndexes.length ?
+      {stickyRowIndex !== undefined && stickyRowIndexes.length ? (
         <StickyRow
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           content={(rows[stickyRowIndexes[stickyRowIndex]] as any).content}
           isStuck
           top={headerRowHeight}
-         /> : null}
+        />
+      ) : null}
       {rows.length === 0 && noRowsFallback ? (
         noRowsFallback
       ) : (
