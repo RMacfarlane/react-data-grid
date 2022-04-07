@@ -4,7 +4,6 @@ import type { CalculatedColumn, SortColumn } from './types';
 import type { HeaderRowProps } from './HeaderRow';
 import SortableHeaderCell from './headerCells/SortableHeaderCell';
 import { getCellStyle, getCellClassname } from './utils';
-import { useRovingCellRef } from './hooks';
 
 const cellResizable = css`
   touch-action: none;
@@ -48,8 +47,7 @@ export default function HeaderCell<R, SR>({
   onAllRowsSelectionChange,
   sortColumns,
   onSortColumnsChange,
-  selectCell,
-  shouldFocusGrid
+  selectCell
 }: HeaderCellProps<R, SR>) {
   const sortIndex = sortColumns?.findIndex((sort) => sort.columnKey === column.key);
   const sortColumn =

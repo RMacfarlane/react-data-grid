@@ -194,7 +194,6 @@ function DataGrid<R, SR, K extends Key>(
     onScroll,
     onColumnResize,
     onFill,
-    onPaste,
     // Toggles and modes
     enableVirtualization,
     // Miscellaneous
@@ -229,7 +228,7 @@ function DataGrid<R, SR, K extends Key>(
   const [selectedPosition, setSelectedPosition] = useState<SelectCellState | EditCellState<R>>(
     initialPosition
   );
-  const [copiedCell, setCopiedCell] = useState<{ row: R; columnKey: string } | null>(null);
+  const [copiedCell] = useState<{ row: R; columnKey: string } | null>(null);
   const [isDragging, setDragging] = useState(false);
   const [draggedOverRowIdx, setOverRowIdx] = useState<number | undefined>(undefined);
 
