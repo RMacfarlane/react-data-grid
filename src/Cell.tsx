@@ -3,7 +3,6 @@ import { css } from '@linaria/core';
 
 import { getCellStyle, getCellClassname, isCellEditable } from './utils';
 import type { CellRendererProps } from './types';
-import { useRovingCellRef } from './hooks';
 
 const cellCopied = css`
   background-color: #ccccff;
@@ -35,8 +34,6 @@ function Cell<R, SR>({
   selectCell,
   ...props
 }: CellRendererProps<R, SR>) {
-  const { ref, tabIndex, onFocus } = useRovingCellRef(isCellSelected);
-
   const { cellClass } = column;
   const className = getCellClassname(
     column,
@@ -69,17 +66,13 @@ function Cell<R, SR>({
     <div
       role="gridcell"
       aria-colindex={column.idx + 1} // aria-colindex is 1-based
-      aria-selected={isCellSelected}
       aria-colspan={colSpan}
       aria-readonly={!isCellEditable(column, row) || undefined}
-      ref={ref}
-      tabIndex={tabIndex}
       className={className}
       style={getCellStyle(column, colSpan)}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
-      onFocus={onFocus}
       {...props}
     >
       {!column.rowGroup && (
