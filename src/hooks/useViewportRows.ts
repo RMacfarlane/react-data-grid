@@ -127,7 +127,7 @@ export function useViewportRows<R>({
       if (typeof r === 'object' && (r as any).isStickyRow) {
         stickyRowInfo.push(i)
       }
-    });
+    })
 
     return stickyRowInfo
   }, [rows])
