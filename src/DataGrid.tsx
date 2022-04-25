@@ -245,7 +245,6 @@ function DataGrid<R, SR, K extends Key>(
   const [gridRef, gridWidth, gridHeight] = useGridDimensions();
   const headerRowsCount = 1;
   const summaryRowsCount = summaryRows?.length ?? 0;
-  const clientHeight = gridHeight - headerRowHeight - summaryRowsCount * summaryRowHeight;
   const isSelectable = selectedRows != null && onSelectedRowsChange != null;
   const isHeaderRowSelected = selectedPosition.rowIdx === -1;
 
@@ -292,16 +291,20 @@ function DataGrid<R, SR, K extends Key>(
     totalRowHeight,
     isGroupRow,
     getRowTop,
-    getRowHeight
+    getRowHeight,
+    clientHeight
   } = useViewportRows({
     rawRows,
     groupBy,
     rowGrouper,
     rowHeight,
-    clientHeight,
     scrollTop,
     expandedGroupIds,
-    enableVirtualization
+    enableVirtualization,
+    headerRowHeight,
+    gridHeight,
+    summaryRowsCount,
+    summaryRowHeight
   });
 
   const viewportColumns = useViewportColumns({

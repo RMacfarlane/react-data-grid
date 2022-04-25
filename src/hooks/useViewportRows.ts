@@ -14,12 +14,15 @@ type GroupByDictionary<TRow> = Record<
 interface ViewportRowsArgs<R> {
   rawRows: readonly R[];
   rowHeight: number | ((args: RowHeightArgs<R>) => number);
-  clientHeight: number;
   scrollTop: number;
   groupBy: readonly string[];
   rowGrouper: Maybe<(rows: readonly R[], columnKey: string) => Record<string, readonly R[]>>;
   expandedGroupIds: Maybe<ReadonlySet<unknown>>;
   enableVirtualization: boolean;
+  headerRowHeight: number;
+  gridHeight: number;
+  summaryRowsCount: number;
+  summaryRowHeight: number;
 }
 
 // TODO: https://github.com/microsoft/TypeScript/issues/41808
@@ -30,12 +33,15 @@ function isReadonlyArray(arr: unknown): arr is readonly unknown[] {
 export function useViewportRows<R>({
   rawRows,
   rowHeight,
-  clientHeight,
   scrollTop,
   groupBy,
   rowGrouper,
   expandedGroupIds,
-  enableVirtualization
+  enableVirtualization,
+  headerRowHeight,
+  gridHeight,
+  summaryRowsCount,
+  summaryRowHeight
 }: ViewportRowsArgs<R>) {
   const [groupedRows, rowsCount] = useMemo(() => {
     if (groupBy.length === 0 || rowGrouper == null) return [undefined, rawRows.length];
@@ -201,6 +207,10 @@ export function useViewportRows<R>({
   let rowOverscanStartIdx = 0;
   let rowOverscanEndIdx = rows.length - 1;
 
+  const stickyRowHeight = stickyRowIndex !== undefined ? headerRowHeight : 0;
+  const clientHeight =
+    gridHeight - headerRowHeight - stickyRowHeight - summaryRowsCount * summaryRowHeight;
+
   if (enableVirtualization) {
     const overscanThreshold = 4;
     const rowVisibleStartIdx = findRowIdx(scrollTop);
@@ -220,6 +230,7 @@ export function useViewportRows<R>({
     getRowHeight,
     findRowIdx,
     stickyRowIndexes,
-    stickyRowIndex
+    stickyRowIndex,
+    clientHeight
   };
 }
