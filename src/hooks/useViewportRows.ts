@@ -207,11 +207,7 @@ export function useViewportRows<R>({
   let rowOverscanStartIdx = 0;
   let rowOverscanEndIdx = rows.length - 1;
 
-  // const headerRowHeight = rawHeaderRowHeight ?? (typeof rowHeight === 'number' ? rowHeight : 35);
-  let stickyRowHeight = 0;
-  if (stickyRowIndex !== undefined) {
-    stickyRowHeight = headerRowHeight;
-  }
+  const stickyRowHeight = stickyRowIndex !== undefined ? headerRowHeight : 0;
   const clientHeight =
     gridHeight - headerRowHeight - stickyRowHeight - summaryRowsCount * summaryRowHeight;
 

@@ -245,14 +245,6 @@ function DataGrid<R, SR, K extends Key>(
   const [gridRef, gridWidth, gridHeight] = useGridDimensions();
   const headerRowsCount = 1;
   const summaryRowsCount = summaryRows?.length ?? 0;
-  // const clientHeight = gridHeight - headerRowHeight - summaryRowsCount * summaryRowHeight;
-  // let stickyRowHeight = 0;
-  // if (stickyRowIndex !== undefined) {
-  //   stickyRowHeight = headerRowHeight;
-  // }
-  // const clientHeight =
-  //   gridHeight - headerRowHeight - stickyRowHeight - summaryRowsCount * summaryRowHeight;
-  // console.log('clientHeight', clientHeight);
   const isSelectable = selectedRows != null && onSelectedRowsChange != null;
   const isHeaderRowSelected = selectedPosition.rowIdx === -1;
 
@@ -870,7 +862,6 @@ function DataGrid<R, SR, K extends Key>(
         noRowsFallback
       ) : (
         <>
-          {/* this is the height we need to fix */}
           <div style={{ height: max(totalRowHeight, clientHeight) }} />
           <RowSelectionChangeProvider value={selectRowLatest}>
             {getViewportRows()}
