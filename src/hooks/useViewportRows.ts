@@ -121,16 +121,16 @@ export function useViewportRows<R>({
   }, [expandedGroupIds, groupedRows, rawRows]);
 
   const stickyRowIndexes = useMemo(() => {
-    const stickyRowInfo: number[] = [];
+    const stickyRowInfo: number[] = []
     rows.forEach((r, i) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (typeof r === 'object' && (r as any).isStickyRow) {
-        stickyRowInfo.push(i);
+        stickyRowInfo.push(i)
       }
     });
 
-    return stickyRowInfo;
-  }, [rows]);
+    return stickyRowInfo
+  }, [rows])
 
   const { totalRowHeight, getRowTop, getRowHeight, findRowIdx } = useMemo(() => {
     if (typeof rowHeight === 'number') {
@@ -187,22 +187,22 @@ export function useViewportRows<R>({
 
   const stickyRowIndex = useMemo(() => {
     if (!stickyRowIndexes.length) {
-      return undefined;
+      return undefined
     }
 
     const rowVisibleStartIdx = findRowIdx(scrollTop);
     for (const [i, rowIndex] of stickyRowIndexes.entries()) {
       if (rowIndex === rowVisibleStartIdx) {
-        return i;
+        return i
       }
 
       if (stickyRowIndexes[i] > rowVisibleStartIdx) {
-        return i === 0 ? i : i - 1;
+        return i === 0 ? i : i - 1
       }
     }
 
-    return stickyRowIndexes.length - 1;
-  }, [stickyRowIndexes, findRowIdx, scrollTop]);
+    return stickyRowIndexes.length - 1
+  }, [stickyRowIndexes, findRowIdx, scrollTop])
 
   let rowOverscanStartIdx = 0;
   let rowOverscanEndIdx = rows.length - 1;
